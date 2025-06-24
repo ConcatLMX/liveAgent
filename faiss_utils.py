@@ -13,8 +13,35 @@ class VectorDatabase:
         self.index_dir = index_dir
         os.makedirs(index_dir, exist_ok=True)
 
-        # 使用优化中文模型
-        self.model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')  # 轻量级中文优化模型
+        # 从配置文件读取模型名称
+        try:
+            with open('config.json', 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            model_name = config.get('model', 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+        except Exception as e:
+            print(f"[warning]读取配置文件失败，使用默认模型: {e}")
+            model_name = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
+
+        # 动态生成本地模型路径
+        # 提取模型名称的最后部分作为文件夹名
+        model_folder_name = model_name.split('/')[-1] if '/' in model_name else model_name
+        local_model_path = os.path.join('local_models', model_folder_name)
+
+        print(f"[info]使用模型: {model_name}")
+        print(f"[info]本地路径: {local_model_path}")
+
+        # 检查本地是否有模型，如果没有则下载
+        if os.path.exists(local_model_path):
+            print("[info]使用本地缓存的模型")
+            self.model = SentenceTransformer(local_model_path)
+        else:
+            print("[info]首次使用，下载模型中...")
+            self.model = SentenceTransformer(model_name)
+            # 创建目录并保存模型
+            os.makedirs('local_models', exist_ok=True)
+            self.model.save(local_model_path)
+            print(f"[info]模型已保存到: {local_model_path}")
+
         self.dimension = self.model.get_sentence_embedding_dimension()
 
         # 文件路径

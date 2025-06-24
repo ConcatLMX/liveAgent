@@ -4,19 +4,45 @@ import json
 from datetime import datetime, timedelta
 import threading
 import keyboard
-from PyQt5.QtCore import Qt, QPropertyAnimation, QPoint, QEasingCurve, QTimer, QObject, pyqtSignal
+from PyQt5.QtCore import Qt, QPropertyAnimation, QPoint, QEasingCurve, QTimer, QObject, pyqtSignal, QThread
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QTextEdit,
                              QLineEdit, QPushButton, QFrame, QScrollArea,
                              QSizePolicy, QHBoxLayout, QLabel, QSystemTrayIcon, QMenu)
 from PyQt5.QtGui import QFont, QIcon, QColor, QPainter, QBrush, QLinearGradient, QPalette
-import chat_command
+import commands
 from faiss_utils import VectorDatabase
-from module import is_json_file_empty
+from modules import is_json_file_empty
+from message_utils import MessageUtils
+from settings import SettingWindow
+from Live2DViewerEX import L2DVEX
 
 HISTORY_FILE = "chat_history.json"
 DEFAULT_HISTORY = {"messages": []}
 COMMAND_LIST = ("--help()","--vb_clear()","--history_clear()","--show_parameters()")
 
+# 读取配置文件
+def reload_config():
+    """重新加载配置文件"""
+    global CONFIG
+    try:
+        with open('config.json', 'r', encoding='utf-8') as f:
+            CONFIG = json.load(f)
+        return True
+    except Exception as e:
+        print(f"[error]重新加载配置文件时发生错误: {e}")
+        return False
+
+try:
+    with open('config.json', 'r', encoding='utf-8') as f:
+        CONFIG = json.load(f)
+except Exception as e:
+    print(f"[error]读取 config.json 时发生错误: {e}")
+    CONFIG = {} 
+
+
+#l2d连接
+if CONFIG.get("live2d_listen", False):
+    l2d = L2DVEX(CONFIG.get("live2d_uri", "ws://"))
 
 # 创建信号对象用于跨线程通信
 class HotkeySignal(QObject):
@@ -27,47 +53,26 @@ class HotkeySignal(QObject):
 hotkey_signal = HotkeySignal()
 
 
-def save_message(role, content):
-    """保存消息到JSON文件"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    message = {
-        "role": role,
-        "content": content,
-        "timestamp": timestamp
-    }
-
-    # 添加到向量数据库
-    # 生成唯一ID
-    msg_id = f"{timestamp}_{role}"
-    app = QApplication.instance()
-    if hasattr(app, 'vector_db'):
-        app.vector_db.add_message(
-            msg_id,
-            role,
-            content,
-            timestamp
-        )
-
-    # 读取现有历史记录或创建新的
-    history = DEFAULT_HISTORY.copy()
-    if os.path.exists(HISTORY_FILE):
+# AI响应生成线程
+class AIResponseThread(QThread):
+    response_ready = pyqtSignal(str)  # 响应准备完成信号
+    error_occurred = pyqtSignal(str)  # 错误发生信号
+    
+    def __init__(self, vector_db, app, message):
+        super().__init__()
+        self.vector_db = vector_db
+        self.app = app
+        self.message = message
+    
+    def run(self):
         try:
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                if is_json_file_empty(HISTORY_FILE):
-                    raise IOError("JSON file is empty")
-                history = json.load(f)
-        except (json.JSONDecodeError, IOError):
-            history = DEFAULT_HISTORY
-
-    # 添加新消息
-    history["messages"].append(message)
-
-    # 保存回文件
-    try:
-        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
-    except IOError:
-        pass
+            mu = MessageUtils(self.vector_db, self.app)
+            response = mu.generate_response(self.message)
+            self.response_ready.emit(response)
+        except Exception as e:
+            error_msg = f"生成回复时发生错误: {e}"
+            print(f"[error]{error_msg}")
+            self.error_occurred.emit("抱歉，处理您的消息时出现了问题，请稍后再试。")
 
 
 def load_todays_history():
@@ -96,51 +101,53 @@ class ChatBubble(QFrame):
         self.is_user = is_user
         self.setObjectName("bubble")
         self.setStyleSheet(self._get_bubble_style())
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)  # 修改为Preferred以支持动态高度
-
-        # 创建主布局
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)        # 创建主布局
         layout = QVBoxLayout()
-        layout.setContentsMargins(12, 8, 12, 8)
-        layout.setSpacing(4)
-
-        # 文本标签 - 使用QTextEdit以支持自动换行和高度调整
-        self.text_label = QTextEdit()
-        self.text_label.setPlainText(text)
-        self.text_label.setReadOnly(True)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(0)# 使用QLabel来显示文本，支持自动换行
+        self.text_label = QLabel(text)
+        self.text_label.setWordWrap(True)  # 启用自动换行
+        self.text_label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.text_label.setStyleSheet("""
             background: transparent;
             border: none;
             color: %s;
-            padding: 0px;
-            font-size: 15px;
+            padding: 4px 6px;
+            font-size: 14px;
+            line-height: 1.5;
         """ % ("#ffffff" if is_user else "#333333"))
-        self.text_label.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.text_label.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-
-        # 根据内容调整高度
-        self._adjust_height()
-
+        
+        # 设置字体
+        font = QFont("Microsoft YaHei UI", 11)
+        self.text_label.setFont(font)
+        
+        # 设置文本标签的大小策略
+        self.text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        
         layout.addWidget(self.text_label)
-        self.setLayout(layout)
+        self.setLayout(layout)        # 设置最大宽度以确保合适的换行
+        self.setMaximumWidth(280)
+        self.setMinimumWidth(60)
 
+    def sizeHint(self):
+        """返回气泡的推荐大小"""
+        # 获取文本标签的大小提示
+        label_hint = self.text_label.sizeHint()
+        # 添加布局边距
+        margins = self.layout().contentsMargins()
+        width = label_hint.width() + margins.left() + margins.right()
+        height = label_hint.height() + margins.top() + margins.bottom()
+        from PyQt5.QtCore import QSize
+        return QSize(width, height)
 
-    def _adjust_height(self):
-        """根据文本内容调整高度"""
-        # 确保文本标签宽度已知（否则sizeHint会不准确）
-        doc = self.text_label.document()
-        doc.adjustSize()
-
-        # 计算合适的高度（内容高度+适当边距）
-        height = doc.size().height() + 15
-
-        # 设置最大高度限制，避免过长消息占用太多空间
-        max_height = min(height, 500)  # 最大高度为500px
-
-        # 实际设置高度
-        self.text_label.setFixedHeight(int(max_height))
-
-
+    def minimumSizeHint(self):
+        """返回气泡的最小大小"""
+        label_hint = self.text_label.minimumSizeHint()
+        margins = self.layout().contentsMargins()
+        width = label_hint.width() + margins.left() + margins.right()
+        height = label_hint.height() + margins.top() + margins.bottom()
+        from PyQt5.QtCore import QSize
+        return QSize(width, height)
     def _get_bubble_style(self):
         if self.is_user:
             return """
@@ -148,6 +155,7 @@ class ChatBubble(QFrame):
                     background: rgb(10, 132, 255);
                     border-radius: 18px;
                     border-bottom-right-radius: 5px;
+                    padding: 2px;
                 }
             """
         else:
@@ -156,6 +164,7 @@ class ChatBubble(QFrame):
                     background: rgb(230, 230, 234);
                     border-radius: 18px;
                     border-bottom-left-radius: 5px;
+                    padding: 2px;
                 }
             """
 
@@ -322,9 +331,7 @@ class ChatWindow(QWidget):
         self.send_btn.setFont(QFont("Microsoft YaHei UI", 10))
         self.send_btn.setEnabled(False)
 
-        self.input_field.textChanged.connect(lambda: self.send_btn.setEnabled(
-            bool(self.input_field.text().strip())
-        ))
+        self.input_field.textChanged.connect(self.on_input_changed)
         self.input_field.returnPressed.connect(self.handle_send)
         self.send_btn.clicked.connect(self.handle_send)
 
@@ -340,19 +347,40 @@ class ChatWindow(QWidget):
 
         self.initialized = True
 
+    def settings_closed(self):
+        """当设置窗口关闭时调用"""
+        self.settings_window = None
+
+    def on_input_changed(self):
+        """输入框文本改变时的处理"""
+        # 只有在不在AI生成过程中才允许启用发送按钮
+        if not hasattr(self, 'ai_thread') or self.ai_thread is None:
+            self.send_btn.setEnabled(bool(self.input_field.text().strip()))
 
     def add_message(self, text, is_user=True):
         """添加消息气泡 - 使用动态高度"""
         bubble = ChatBubble(text, is_user)
 
-        # 设置对齐方式
-        alignment = Qt.AlignRight | Qt.AlignTop if is_user else Qt.AlignLeft | Qt.AlignTop
+        # 创建包装器来控制气泡的对齐
+        wrapper = QWidget()
+        wrapper.setStyleSheet("background: transparent;")
+        wrapper_layout = QHBoxLayout(wrapper)
+        wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        
+        if is_user:
+            # 用户消息：右对齐
+            wrapper_layout.addStretch()
+            wrapper_layout.addWidget(bubble)
+        else:
+            # AI消息：左对齐
+            wrapper_layout.addWidget(bubble)
+            wrapper_layout.addStretch()
 
-        # 添加到布局
-        self.chat_layout.insertWidget(self.chat_layout.count() - 1, bubble, alignment=alignment)
+        # 添加到主布局
+        self.chat_layout.insertWidget(self.chat_layout.count() - 1, wrapper)
 
         # 滚动到底部
-        QTimer.singleShot(50, self.scroll_to_bottom)
+        QTimer.singleShot(100, self.scroll_to_bottom)
 
 
     def scroll_to_bottom(self):
@@ -382,28 +410,8 @@ class ChatWindow(QWidget):
                 self.add_message(content, is_user=True)
             else:
                 self.add_message(content, is_user=False)
-
-
-    def generate_response(self, query):
-        app = QApplication.instance()
-        context = ""
-        if hasattr(app, 'vector_db'):
-            # 获取相关历史
-            results = app.vector_db.search(query, k=3, threshold=0.5)
-
-            if results:
-                context = "\n".join(
-                    f"[{res['role']}]: {res['content']}"
-                    for res in results
-                )
-
-        # 简单示例：使用上下文生成回复
-        if context:
-            return f"基于您之前的对话，我理解您想问：\n{context}\n需要我做什么吗？"
-        else:
-            return "好的，我记下了！"
-
-
+    
+    # 按下发送键后的发送控制
     def handle_send(self):
         msg = self.input_field.text().strip()
         if not msg:
@@ -415,19 +423,112 @@ class ChatWindow(QWidget):
         # 判断是否为命令集
         app = QApplication.instance()
         if msg in COMMAND_LIST:
-            chat_command.cmd_exec(app.vector_db, msg)
+            commands.cmd_exec(app.vector_db, msg)
+            return
+        if msg == "-s":
+            # 创建并显示模态设置窗口
+            settings = SettingWindow(vector_db= app.vector_db, parent=self)
+            settings.setWindowModality(Qt.ApplicationModal)  # 设置为应用模态
+            settings.exec_()  # 模态显示窗口
             return
 
-        # 用户消息 - 不再显示时间戳
+        # 禁用发送按钮，防止重复发送
+        self.send_btn.setEnabled(False)
+        self.send_btn.setText("生成中...")
+        
+        # 用户消息 - 立即显示
         self.add_message(msg, is_user=True)
+        
+        # 显示"正在思考"的占位符
+        self.thinking_bubble = self.add_thinking_bubble()
+        
+        # 异步生成AI回复
+        self.ai_thread = AIResponseThread(app.vector_db, app, msg)
+        self.ai_thread.response_ready.connect(self.on_ai_response_ready)
+        self.ai_thread.error_occurred.connect(self.on_ai_error)
+        self.ai_thread.finished.connect(self.on_ai_thread_finished)
+        
+        # 保存用户消息
+        try:
+            mu = MessageUtils(app.vector_db, app)
+            mu.save_message("user", msg)
+        except Exception as e:
+            print(f"[warning]保存用户消息时发生错误: {e}")
+          # 启动AI响应线程
+        self.ai_thread.start()
 
-        # AI回复（临时）- 不再显示时间戳你
-        ai_response = self.generate_response(msg)
-        self.add_message(ai_response, is_user=False)
+    def add_thinking_bubble(self):
+        """添加'正在思考'的气泡"""
+        thinking_text = "🤔 正在思考中..."
+        bubble = ChatBubble(thinking_text, is_user=False)
+        bubble.setObjectName("thinking_bubble")  # 设置特殊标识
+        
+        # 添加动画效果的样式
+        bubble.setStyleSheet(bubble._get_bubble_style() + """
+            QLabel {
+                color: #666666;
+                font-style: italic;
+            }
+        """)
+        
+        # 创建包装器
+        wrapper = QWidget()
+        wrapper.setStyleSheet("background: transparent;")
+        wrapper_layout = QHBoxLayout(wrapper)
+        wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # AI消息：左对齐
+        wrapper_layout.addWidget(bubble)
+        wrapper_layout.addStretch()
+        
+        # 添加到主布局
+        self.chat_layout.insertWidget(self.chat_layout.count() - 1, wrapper)
+        
+        # 滚动到底部
+        QTimer.singleShot(100, self.scroll_to_bottom)
+        
+        return wrapper
 
-        # 保存对话
-        save_message("user", msg)
-        save_message("assistant", ai_response)
+    def on_ai_response_ready(self, response):
+        """AI回复准备完成"""
+        # 移除"正在思考"的气泡
+        if hasattr(self, 'thinking_bubble') and self.thinking_bubble:
+            self.thinking_bubble.deleteLater()
+            
+        # 添加AI回复
+        self.add_message(response, is_user=False)
+
+        # L2D发送消息
+        if CONFIG.get("live2d_listen", False):
+            l2d.send_text_message(response)
+        
+        # 保存AI回复
+        try:
+            app = QApplication.instance()
+            mu = MessageUtils(app.vector_db, app)
+            mu.save_message("assistant", response)
+        except Exception as e:
+            print(f"[warning]保存AI回复时发生错误: {e}")
+
+    def on_ai_error(self, error_msg):
+        """AI生成错误"""
+        # 移除"正在思考"的气泡
+        if hasattr(self, 'thinking_bubble') and self.thinking_bubble:
+            self.thinking_bubble.deleteLater()
+            
+        # 显示错误消息
+        self.add_message(error_msg, is_user=False)
+
+    def on_ai_thread_finished(self):
+        """AI线程完成"""
+        # 重新启用发送按钮
+        self.send_btn.setEnabled(True)
+        self.send_btn.setText("发送")
+        
+        # 清理线程引用
+        if hasattr(self, 'ai_thread'):
+            self.ai_thread.deleteLater()
+            self.ai_thread = None
 
 
     def showAnimation(self):
@@ -533,19 +634,47 @@ def toggle_chat_window():
 
 def hotkey_listener():
     """热键监听函数，在单独的线程中运行"""
-    # 修改热键为Alt+Q
-    keyboard.add_hotkey('alt+q', lambda: hotkey_signal.toggle_signal.emit())
-    keyboard.wait()
+    try:
+        # 读取配置文件中的热键设置
+        hotkey_raw = CONFIG.get("hotkey", "Alt+Q")
+        # 标准化热键格式
+        hotkey = hotkey_raw.strip().lower()
+        # 确保组合键格式正确
+        hotkey = hotkey.replace(' ', '').replace('alt+', 'alt+').replace('ctrl+', 'ctrl+').replace('shift+', 'shift+')
+        
+        # 注册热键
+        try:
+            keyboard.add_hotkey(hotkey, lambda: hotkey_signal.toggle_signal.emit())
+            print(f"[info]已注册热键: {hotkey} (原始: {hotkey_raw})")
+        except Exception as e:
+            print(f"[error]注册热键失败: {e}, 热键: {hotkey}")
+            # 尝试使用默认热键
+            try:
+                default_hotkey = "alt+q"
+                keyboard.add_hotkey(default_hotkey, lambda: hotkey_signal.toggle_signal.emit())
+                print(f"[info]使用默认热键: {default_hotkey}")
+            except Exception as e2:
+                print(f"[error]连默认热键也注册失败: {e2}")
+        
+        # 保持线程运行
+        while True:
+            import time
+            time.sleep(60)  # 每分钟检查一次线程状态
+            
+    except Exception as e:
+        print(f"[error]热键监听器错误: {e}")
+        import time
+        time.sleep(5)
 
 
-def is_older_than_seven_days(timestamp_str, current_time=None):
+def is_older_than_given_day(timestamp_str, current_time=None, day=7):
     # 将时间字符串转为datetime对象
     timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
     # 如果没提供当前时间，则使用当前时间
     if current_time is None:
         current_time = datetime.now()
     # 计算时间差
-    return current_time - timestamp > timedelta(days=7)
+    return current_time - timestamp > timedelta(days=day)
 
 
 def routine_clear():
@@ -557,14 +686,13 @@ def routine_clear():
         return
 
     with open(history_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    # 过滤超过7天的消息
+        data = json.load(f)    # 过滤超过配置天数的消息
     current_time = datetime.now()
+    max_days = CONFIG.get("max_day", 7)  # 从配置文件读取保留天数，默认7天
     old_count = len(data["messages"])
     data["messages"] = [
         msg for msg in data["messages"]
-        if not is_older_than_seven_days(msg["timestamp"], current_time)
+        if not is_older_than_given_day(msg["timestamp"], current_time, max_days)
     ]
     new_count = len(data["messages"])
     print(f"[info]清理JSON文件: 原始记录数: {old_count}, 清理后记录数: {new_count}")
@@ -579,6 +707,24 @@ def routine_clear():
         app.vector_db.rebuild_with_add_message(data["messages"])
     else:
         print("[warning]向量数据库未初始化，跳过重建")
+
+
+def cleanup_on_exit(app):
+    """应用退出时的清理工作"""
+    try:
+        # 清理热键
+        keyboard.unhook_all_hotkeys()
+        print("[info]已清理所有热键")
+    except:
+        pass
+    
+    try:
+        # 保存向量数据库
+        if hasattr(app, 'vector_db') and app.vector_db:
+            app.vector_db.save()
+            print("[info]已保存向量数据库")
+    except:
+        pass
 
 
 def start_app():
@@ -601,11 +747,8 @@ def start_app():
     hotkey_signal.exit_signal.connect(lambda: app.quit())
 
     # 启动热键监听线程
-    threading.Thread(target=hotkey_listener, daemon=True).start()
-
-    # 确保应用在退出时关闭所有资源
-    app.aboutToQuit.connect(lambda: keyboard.unhook_all_hotkeys())
-    app.aboutToQuit.connect(lambda: app.vector_db.save())
+    threading.Thread(target=hotkey_listener, daemon=True).start()    # 确保应用在退出时关闭所有资源
+    app.aboutToQuit.connect(lambda: cleanup_on_exit(app))
 
     # 添加属性用于存储聊天窗口
     app.chat_window = None
@@ -626,8 +769,8 @@ def start_app():
     load_todays_history()
 
     # 成功标志
-    print("[tips]对话框中输入 --help() 获取帮助文档")
-    print("[info]初始化成功!按下Alt+Q唤起聊天窗口")
+    print("[tips]对话框中输入--help()获取命令集")
+    print("[info]初始化成功!按下热键唤起聊天窗口")
 
     # 进入事件循环
     app.exec_()

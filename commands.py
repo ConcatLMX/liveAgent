@@ -45,12 +45,21 @@ class Command:
         with open('chat_history.json', 'w') as f:
             json.dump({}, f)
         print("[info]对话历史已清除")
-
-
     def show_parameters(self):
         """显示运行参数"""
+        # 从配置文件读取模型名称
+        try:
+            with open('config.json', 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            model_name = config.get('model', 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+            api_model = config.get('api_model', 'Deepseek-v3')
+        except Exception as e:
+            print(f"[warning]读取配置文件失败: {e}")
+            model_name = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
+            api_model = 'Deepseek-v3'
+            
         print("[parameters]当前运行参数：")
-        print("> ai_api: Deepseek-v3")
+        print(f"> ai_api: {api_model}")
         print("> vector_db: Faiss")
-        print("> embed_model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+        print(f"> embed_model: {model_name}")
         print("> db: JSON")
