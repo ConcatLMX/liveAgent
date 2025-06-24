@@ -1,29 +1,15 @@
-# liveAgent
+# liveAgent 环境配置指南
 
-这是一个可以随时随地呼出的便携ai
-
-## 主要特点
-
-- 长期记忆和记忆更新机制（FAISS+JSON）
-
-- 自定义Embed对话的模型
-
-- 接入大模型api
-
-- 接受总结邮件
-
-- 可连接Live2DViewerEX
-
-## 安装步骤
-
-Python版本要求
+## Python版本要求
 
 - Python 3.12
+
+## 安装步骤
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/ConcatLMX/liveAgent.git
+git clone <repository_url>
 cd liveAgent
 ```
 
@@ -32,15 +18,12 @@ cd liveAgent
 ```bash
 # 创建虚拟环境
 python -m venv venv
-# 推荐使用conda
-conda create -n venv python=3.12
 
 # 激活虚拟环境
 # Windows:
 venv\Scripts\activate
 # Linux/Mac:
 source venv/bin/activate
-
 ```
 
 ### 3. 安装依赖
@@ -51,8 +34,6 @@ pip install -r requirements.txt
 
 ### 4. 手动下载模型（可选）
 
-首次使用新模型时会自动下载
-
 如果网络连接有问题，可以手动下载sentence-transformers模型：
 
 ```bash
@@ -62,6 +43,27 @@ mkdir -p local_models
 # 从Hugging Face手动下载模型到local_models目录
 # 例如：paraphrase-multilingual-MiniLM-L12-v2
 ```
+
+## 主要依赖说明
+
+### 核心GUI框架
+
+- **PyQt5**: 图形用户界面框架
+- **keyboard**: 全局热键监听
+
+### AI和机器学习
+
+- **sentence-transformers**: 文本嵌入模型
+- **faiss-cpu**: 向量相似度搜索（CPU版本）
+- **openai**: OpenAI API客户端
+- **numpy**: 数值计算
+
+### 功能模块
+
+- **websocket-client**: Live2D WebSocket通信
+- **IMAPClient**: 邮件IMAP客户端
+- **pyzmail36**: 邮件解析
+- **beautifulsoup4**: HTML解析
 
 ## 可能遇到的问题
 
@@ -82,7 +84,15 @@ pip uninstall faiss-cpu
 pip install faiss-gpu
 ```
 
-### 3. Windows上keyboard权限问题
+### 3. sentence-transformers模型下载慢
+
+可以设置镜像：
+
+```bash
+export HF_ENDPOINT=https://hf-mirror.com
+```
+
+### 4. Windows上keyboard权限问题
 
 需要以管理员身份运行Python程序
 
