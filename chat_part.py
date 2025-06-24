@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import time
 from datetime import datetime, timedelta
 import threading
 import keyboard
@@ -15,6 +16,8 @@ from modules import is_json_file_empty
 from message_utils import MessageUtils
 from settings import SettingWindow
 from Live2DViewerEX import L2DVEX
+from Automation import EmailUtils
+from Automation import EmailMonitorThread
 
 HISTORY_FILE = "chat_history.json"
 DEFAULT_HISTORY = {"messages": []}
@@ -32,17 +35,24 @@ def reload_config():
         print(f"[error]重新加载配置文件时发生错误: {e}")
         return False
 
+# 从 settings.py 导入默认配置
+from settings import DEFAULT_CONFIG
+
 try:
     with open('config.json', 'r', encoding='utf-8') as f:
         CONFIG = json.load(f)
 except Exception as e:
     print(f"[error]读取 config.json 时发生错误: {e}")
-    CONFIG = {} 
+    # 配置文件不存在或读取失败，创建默认配置文件
+    CONFIG = DEFAULT_CONFIG
+    try:
+        with open('config.json', 'w', encoding='utf-8') as f:
+            json.dump(CONFIG, f, ensure_ascii=False, indent=2)
+        print("[info]已创建默认配置文件 config.json")
+    except Exception as create_error:
+        print(f"[error]创建默认配置文件失败: {create_error}")
+        CONFIG = {} 
 
-
-#l2d连接
-if CONFIG.get("live2d_listen", False):
-    l2d = L2DVEX(CONFIG.get("live2d_uri", "ws://"))
 
 # 创建信号对象用于跨线程通信
 class HotkeySignal(QObject):
@@ -777,5 +787,18 @@ def start_app():
 
 
 if __name__ == "__main__":
-    print("[info]初始化中...")
+    print("[info]初始化中...")    
+    
+    #l2d连接
+    if CONFIG.get("live2d_listen", False):
+        l2d = L2DVEX(CONFIG.get("live2d_uri", "ws://"))
+    
+    #监听邮箱
+    if CONFIG.get("receiveemail", False):
+        # 启动邮箱监听线程
+        email_monitor = EmailMonitorThread()
+        email_monitor.start()
+        print("[info]邮箱监听线程已启动")
+
+
     start_app()

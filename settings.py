@@ -1,18 +1,20 @@
 import json
 import os
 import sys
+from datetime import datetime
 from PyQt5.QtCore import Qt, QPoint, QSize, QRect, QPropertyAnimation, QEasingCurve, pyqtSignal, pyqtProperty, QTimer
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QPushButton, QFrame, QLineEdit,
                              QComboBox, QSlider, QFormLayout,
                              QSizePolicy, QDialog, QMessageBox,
-                             QTextEdit, QGridLayout, QSpacerItem)
+                             QTextEdit, QGridLayout, QSpacerItem, QScrollArea)
 from PyQt5.QtGui import QFont, QPainter, QColor, QBrush, QIcon, QIntValidator, QPalette
 from faiss_utils import VectorDatabase
 from commands import cmd_exec
 
 CONFIG_FILE = "config.json"
 SYSTEM_PROMPT_FILE = "system_prompt.json"
+EMAIL_DATA_FILE = "data.json"
 DEFAULT_CONFIG = {
     "max_day": 7,
     "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
@@ -478,20 +480,50 @@ class SettingWindow(QDialog):
 
         # 添加间距
         grid_layout.addItem(QSpacerItem(10, 10), row, 0)
-        row += 1
-
-        # 接收邮件通知
+        row += 1        # 接收邮件通知
         self.email_label = QLabel("邮件总结:")
         self.email_label.setFont(setting_font)
-        grid_layout.addWidget(self.email_label, row, 0, Qt.AlignRight | Qt.AlignVCenter)        # 使用现代风格开关
+        grid_layout.addWidget(self.email_label, row, 0, Qt.AlignRight | Qt.AlignVCenter)        # 邮件设置布局
+        email_layout = QHBoxLayout()
+        email_layout.setSpacing(8)
+        
+        # 使用现代风格开关
         self.email_switch = ModernSwitch()
         self.email_switch.stateChanged.connect(self.on_switch_changed)
-        grid_layout.addWidget(self.email_switch, row, 1, Qt.AlignLeft | Qt.AlignVCenter)
+        email_layout.addWidget(self.email_switch)
+        
+        # 邮箱配置按钮
+        self.email_config_btn = QPushButton("管理邮箱")
+        self.email_config_btn.setFont(setting_font)
+        self.email_config_btn.setFixedSize(72, 24)
+        self.email_config_btn.setStyleSheet("""
+            QPushButton {
+                background: #f0f0f0;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                color: #333;
+                font-size: 9px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: #e5e5e5;
+            }
+            QPushButton:pressed {
+                background: #d0d0d0;
+            }
+        """)
+        self.email_config_btn.clicked.connect(self.open_email_config)
+        email_layout.addWidget(self.email_config_btn)
+        
+        email_layout.addStretch()
+        grid_layout.addLayout(email_layout, row, 1, Qt.AlignLeft | Qt.AlignVCenter)
         row += 1
 
         # 添加间距
         grid_layout.addItem(QSpacerItem(10, 10), row, 0)
-        row += 1        # Live2D URI设置
+        row += 1
+        
+        # Live2D URI设置
         self.live2d_uri_label = QLabel("Live2D URI:")
         self.live2d_uri_label.setFont(setting_font)
         grid_layout.addWidget(self.live2d_uri_label, row, 0, Qt.AlignRight | Qt.AlignVCenter)
@@ -874,7 +906,241 @@ class SettingWindow(QDialog):
                 if check_timer:
                     check_timer.stop()
         except:
-            pass    # ...existing code...
+            pass
+
+    def open_email_config(self):
+        """打开邮箱配置界面"""
+        # 创建邮箱配置对话框
+        email_dialog = QDialog(self)
+        email_dialog.setWindowTitle("邮箱配置")
+        email_dialog.setFixedSize(600, 500)
+
+        # 主布局
+        main_layout = QVBoxLayout(email_dialog)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(15)
+
+        # 标题
+        title_label = QLabel("邮箱配置")
+        title_label.setFont(QFont("Microsoft YaHei UI", 12, QFont.Bold))
+        main_layout.addWidget(title_label)
+
+        # 分割线
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        main_layout.addWidget(line)
+
+        # 添加邮箱区域
+        add_label = QLabel("添加新邮箱:")
+        add_label.setFont(QFont("Microsoft YaHei UI", 10, QFont.Bold))
+        main_layout.addWidget(add_label)
+        
+        # 表单布局 - 使用QFormLayout
+        form_layout = QFormLayout()
+        form_layout.setSpacing(10)
+        
+        # 邮箱地址
+        self.email_input = QLineEdit()
+        self.email_input.setPlaceholderText("example@gmail.com")
+        form_layout.addRow("邮箱地址:", self.email_input)
+        
+        # 密码
+        self.password_input = QLineEdit()
+        self.password_input.setEchoMode(QLineEdit.Password)
+        self.password_input.setPlaceholderText("邮箱密码或授权码")
+        form_layout.addRow("授权密码:", self.password_input)
+        
+        # IMAP服务器
+        self.imap_input = QLineEdit()
+        self.imap_input.setPlaceholderText("imap.gmail.com")
+        form_layout.addRow("IMAP服务器:", self.imap_input)
+        
+        main_layout.addLayout(form_layout)
+        
+        # 添加按钮
+        add_btn = QPushButton("添加邮箱")
+        add_btn.clicked.connect(lambda: self.add_email_account(email_dialog))
+        main_layout.addWidget(add_btn)
+
+        # 分割线
+        line2 = QFrame()
+        line2.setFrameShape(QFrame.HLine)
+        line2.setFrameShadow(QFrame.Sunken)
+        main_layout.addWidget(line2)
+
+        # 邮箱列表标题
+        list_label = QLabel("已配置邮箱:")
+        list_label.setFont(QFont("Microsoft YaHei UI", 10, QFont.Bold))
+        main_layout.addWidget(list_label)
+
+        # 邮箱列表
+        self.email_list_widget = QWidget()
+        self.email_list_layout = QVBoxLayout(self.email_list_widget)
+        self.email_list_layout.setSpacing(5)
+        
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(self.email_list_widget)
+        scroll_area.setMaximumHeight(150)
+        main_layout.addWidget(scroll_area)
+
+        # 刷新邮箱列表
+        self.refresh_email_list()
+
+        # 底部按钮
+        button_layout = QHBoxLayout()
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(email_dialog.accept)
+        button_layout.addStretch()
+        button_layout.addWidget(close_btn)
+        main_layout.addLayout(button_layout)
+
+        email_dialog.exec_()
+
+    def _get_input_style(self):
+        """获取输入框样式"""
+        return """
+            QLineEdit {
+                border: 2px solid #ced4da;
+                border-radius: 8px;
+                padding: 10px 15px;
+                background: white;
+                font-size: 11pt;
+                font-family: "Microsoft YaHei UI";
+                min-height: 20px;
+            }
+            QLineEdit:focus {
+                border-color: #0A84FF;
+                background: #f8f9ff;
+            }
+            QLineEdit::placeholder {
+                color: #6c757d;
+            }
+        """
+
+    def load_email_data(self):
+        """加载邮箱数据"""
+        try:
+            if os.path.exists(EMAIL_DATA_FILE):
+                with open(EMAIL_DATA_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            return {"emails": []}
+        except Exception as e:
+            print(f"[error]加载邮箱数据失败: {e}")
+            return {"emails": []}
+
+    def save_email_data(self, data):
+        """保存邮箱数据"""
+        try:
+            with open(EMAIL_DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"[error]保存邮箱数据失败: {e}")
+            QMessageBox.critical(self, "保存失败", f"保存邮箱数据时出错:\n{str(e)}")
+            return False
+
+    def add_email_account(self, dialog):
+        """添加邮箱账户"""
+        email = self.email_input.text().strip()
+        password = self.password_input.text().strip()
+        imap_server = self.imap_input.text().strip()
+
+        # 验证输入
+        if not email or not password or not imap_server:
+            QMessageBox.warning(dialog, "输入错误", "请填写完整的邮箱信息！")
+            return
+
+        # 简单的邮箱格式验证
+        if "@" not in email or "." not in email:
+            QMessageBox.warning(dialog, "格式错误", "请输入有效的邮箱地址！")
+            return
+
+        # 加载现有数据
+        data = self.load_email_data()
+
+        # 检查邮箱是否已存在
+        for existing_email in data["emails"]:
+            if existing_email["email"] == email:
+                QMessageBox.warning(dialog, "重复邮箱", "该邮箱已经添加过了！")
+                return
+
+        # 添加新邮箱
+        new_email = {
+            "email": email,
+            "password": password,
+            "imap_server": imap_server,
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        data["emails"].append(new_email)        # 保存数据
+        if self.save_email_data(data):
+            QMessageBox.information(dialog, "添加成功", f"邮箱 {email} 已成功添加！")
+            # 清空输入框
+            self.email_input.clear()
+            self.password_input.clear()
+            self.imap_input.clear()
+            # 刷新列表
+            self.refresh_email_list()
+
+    def refresh_email_list(self):
+        """刷新邮箱列表显示"""
+        # 清空现有列表
+        for i in reversed(range(self.email_list_layout.count())):
+            child = self.email_list_layout.itemAt(i).widget()
+            if child:
+                child.setParent(None)
+
+        # 加载数据
+        data = self.load_email_data()
+        
+        if not data["emails"]:
+            # 显示空状态
+            empty_label = QLabel("暂无配置的邮箱")
+            empty_label.setAlignment(Qt.AlignCenter)
+            self.email_list_layout.addWidget(empty_label)
+            return
+
+        # 显示邮箱列表
+        for i, email_info in enumerate(data["emails"]):
+            # 创建一行
+            row_widget = QWidget()
+            row_layout = QHBoxLayout(row_widget)
+            row_layout.setContentsMargins(5, 5, 5, 5)
+            
+            # 邮箱信息
+            info_text = f"{email_info['email']} ({email_info['imap_server']})"
+            info_label = QLabel(info_text)
+            row_layout.addWidget(info_label)
+            
+            row_layout.addStretch()
+            
+            # 删除按钮
+            delete_btn = QPushButton("删除")
+            delete_btn.setFixedSize(60, 25)
+            delete_btn.clicked.connect(lambda checked, idx=i: self.delete_email_account(idx))
+            row_layout.addWidget(delete_btn)
+            
+            self.email_list_layout.addWidget(row_widget)
+
+    def delete_email_account(self, index):
+        """删除邮箱账户"""
+        data = self.load_email_data()
+        
+        if 0 <= index < len(data["emails"]):
+            email_info = data["emails"][index]
+            reply = QMessageBox.question(
+                self, "确认删除",
+                f"确定要删除邮箱 {email_info['email']} 吗？",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                data["emails"].pop(index)
+                if self.save_email_data(data):
+                    self.refresh_email_list()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
