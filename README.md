@@ -1,2 +1,2 @@
 # liveAgent
-2025星火杯项目
+基于FAISS、JSON和Live2D的AIagent
