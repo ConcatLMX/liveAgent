@@ -506,11 +506,13 @@ class ChatWindow(QWidget):
             self.thinking_bubble.deleteLater()
             
         # 添加AI回复
-        self.add_message(response, is_user=False)
-
-        # L2D发送消息
+        self.add_message(response, is_user=False)        # L2D发送消息
         if CONFIG.get("live2d_listen", False):
-            l2d.send_text_message(response)
+            try:
+                l2d_instance = L2DVEX(CONFIG.get("live2d_uri", "ws://"))
+                l2d_instance.send_text_message(response)
+            except Exception as e:
+                print(f"[error]发送消息到Live2D失败: {e}")
         
         # 保存AI回复
         try:
@@ -739,6 +741,8 @@ def cleanup_on_exit(app):
 
 def start_app():
     """主应用启动函数"""
+    print("[info]初始化中...")  
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
@@ -778,6 +782,16 @@ def start_app():
     # 加载现有历史记录
     load_todays_history()
 
+    #l2d连接
+    if CONFIG.get("live2d_listen", False):
+        l2d = L2DVEX(CONFIG.get("live2d_uri", "ws://"))    #监听邮箱
+    if CONFIG.get("receiveemail", False):
+        # 启动邮箱监听线程，传递app和vector_db实例
+        # 检查间隔设为300秒（5分钟），避免频繁连接邮件服务器
+        email_monitor = EmailMonitorThread("data.json", 300, app, app.vector_db)
+        email_monitor.start()
+        print("[info]邮箱监听线程已启动，检查间隔: 5分钟")
+
     # 成功标志
     print("[tips]对话框中输入--help()获取命令集")
     print("[info]初始化成功!按下热键唤起聊天窗口")
@@ -786,19 +800,5 @@ def start_app():
     app.exec_()
 
 
-if __name__ == "__main__":
-    print("[info]初始化中...")    
-    
-    #l2d连接
-    if CONFIG.get("live2d_listen", False):
-        l2d = L2DVEX(CONFIG.get("live2d_uri", "ws://"))
-    
-    #监听邮箱
-    if CONFIG.get("receiveemail", False):
-        # 启动邮箱监听线程
-        email_monitor = EmailMonitorThread()
-        email_monitor.start()
-        print("[info]邮箱监听线程已启动")
-
-
+if __name__ == "__main__":  
     start_app()

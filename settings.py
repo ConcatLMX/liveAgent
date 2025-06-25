@@ -1142,6 +1142,8 @@ class SettingWindow(QDialog):
                 if self.save_email_data(data):
                     self.refresh_email_list()
 
+
+# settings模块单独测试用
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
@@ -1150,6 +1152,13 @@ if __name__ == "__main__":
     palette.setColor(QPalette.Window, QColor(250, 250, 250))
     app.setPalette(palette)
 
-    settings = SettingWindow()
+    # 创建临时的向量数据库实例用于测试
+    try:
+        vector_db = VectorDatabase()
+    except Exception as e:
+        print(f"[warning]无法创建向量数据库实例: {e}")
+        vector_db = None
+
+    settings = SettingWindow(vector_db)
     settings.show()
     sys.exit(app.exec_())

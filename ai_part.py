@@ -32,20 +32,57 @@ class AiChat:
         self.client = OpenAI(
             api_key=self.api_key,
             base_url=self.api_url,
-        )        # 系统消息和对话记录
-        self.system_messages =[{"role": "system",
-                                "content": self.preset}]
+        )
+        
+        # 系统消息和对话记录
+        self.system_message = [{"role": "system", "content": self.preset}]
 
     def get_message(self, message: list) -> str:
         """发送请求并返回 AI 回复"""
         try:
+            print(f"[debug]准备发送请求到AI模型: {self.model}")
+            print(f"[debug]请求消息数量: {len(message)}")
+            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=message,
                 temperature=self.temperature,
             )
 
-            return response.choices[0].message.content
+            result = response.choices[0].message.content
+            print(f"[debug]AI回复长度: {len(result) if result else 0}")
+            return result
+            
         except Exception as e:
             print(f"[error]AI 回复生成失败: {e}")
+            print(f"[error]API URL: {self.api_url}")
+            print(f"[error]Model: {self.model}")
+            print(f"[error]Messages: {message}")
             return "抱歉，我现在无法回复您的消息，请稍后再试。"
+        
+    # 处理通用ai询问
+    def general_summary(self, input: str) -> str:
+        """生成通用摘要"""
+        try:
+            if not input or not input.strip():
+                return "抱歉，输入内容为空，无法生成摘要。"
+            
+            # 限制输入长度，避免API错误
+            if len(input) > 3000:
+                input = input[:3000] + "..."
+            
+            messages = []
+            # 使用系统预设作为系统消息
+            messages.extend(self.system_message)
+            # 添加用户输入作为用户消息
+            messages.append({
+                "role": "user",
+                "content": input
+            })
+            
+            print(f"[debug]发送给AI的消息数量: {len(messages)}")
+            return self.get_message(messages)
+            
+        except Exception as e:
+            print(f"[error]general_summary 方法执行失败: {e}")
+            return "抱歉，摘要生成失败，请稍后再试。"

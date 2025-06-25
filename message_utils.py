@@ -110,12 +110,13 @@ class MessageUtils:
                         "role": res.get('role', 'user'),
                         "content": res.get('content', '')
                     })
-            except Exception as e:                print(f"[warning]搜索向量数据库时出错: {e}")
+            except Exception as e:                
+                print(f"[warning]搜索向量数据库时出错: {e}")
                 # 继续执行，不中断对话流程
 
         # 4. 加入 system prompt
-        if hasattr(ac, 'system_messages'):
-            messages.extend(ac.system_messages)
+        if hasattr(ac, 'system_message'):
+            messages.extend(ac.system_message)
 
         return messages
     
