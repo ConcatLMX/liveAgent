@@ -240,7 +240,7 @@ class SettingWindow(QDialog):
         row += 1
 
         # 模型选择
-        self.model_label = QLabel("Embed模型:")
+        self.model_label = QLabel("Embedding模型:")
         self.model_label.setFont(setting_font)
         grid_layout.addWidget(self.model_label, row, 0, Qt.AlignRight | Qt.AlignVCenter)
 
