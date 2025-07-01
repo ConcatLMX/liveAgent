@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from ai_part import AiChat
 from Live2DViewerEX import L2DVEX
 from message_utils import MessageUtils
+from control import WindowsControl
 
 
 class EmailUtils:
@@ -377,6 +378,12 @@ class EmailMonitorThread(threading.Thread):
                         print(f"[info]邮件摘要已直接添加到 chat_history.json（备用方式）")
                     except Exception as backup_e:
                         print(f"[error]备用方式保存邮件摘要也失败: {backup_e}")
+
+            #Windows消息提醒
+            WindowsControl.send_notification(
+                title=f"新邮件来自 {sender}",
+                message=f"主题：{subject}"
+            )
             
             # 发送到Live2D（如果启用）
             if self.config.get("live2d_listen", False):
