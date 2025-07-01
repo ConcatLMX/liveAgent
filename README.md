@@ -32,16 +32,9 @@ cd liveAgent
 ### 2. 创建虚拟环境（推荐）
 
 ```bash
-# 创建虚拟环境
-python -m venv venv
 # 推荐使用conda
-conda create -n venv python=3.12
-
-# 激活虚拟环境
-# Windows:
-venv\Scripts\activate
-# conda:
-conda activate venv 
+conda create -n agent python=3.12
+conda activate agent
 ```
 
 ### 3. 安装依赖
@@ -54,15 +47,7 @@ pip install -r requirements.txt
 
 首次使用新模型时会自动从Huggingface下载
 
-如果网络连接有问题，可以手动下载sentence-transformers模型：
-
-```bash
-# 创建模型目录
-mkdir -p local_models
-
-# 从Hugging Face手动下载模型到local_models目录
-# 例如：paraphrase-multilingual-MiniLM-L12-v2
-```
+如果网络连接有问题，可以手动下载sentence-transformers模型
 
 ### 5. 运行程序
 
