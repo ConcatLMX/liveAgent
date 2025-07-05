@@ -1,5 +1,6 @@
 # GUI框架
 PyQt5>=5.15.0
+PyQtWebEngine>=5.15.0
 
 # 机器学习和向量搜索
 faiss-cpu>=1.7.0
@@ -20,5 +21,10 @@ IMAPClient>=2.3.0
 pyzmail36>=1.0.4
 beautifulsoup4>=4.10.0
 
+# Markdown渲染支持
+markdown>=3.4.0
+pymdown-extensions>=9.0.0
+
 # 基础依赖（通常已包含在Python中，但为了确保版本兼容性）
 requests>=2.25.0
+

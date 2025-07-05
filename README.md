@@ -4,15 +4,15 @@
 
 ## 主要特点
 
-- 长期记忆和记忆更新机制（FAISS+JSON）
+- 长期记忆和记忆更新机制
 
-- 自定义相关机制
+- 自定义模型
 
 - 自定义AI设定
 
-- 接入大模型api
+- 邮件提醒
 
-- 接收总结邮件
+- Markdown渲染
 
 - 可连接Live2DViewerEX
 
@@ -55,7 +55,7 @@ pip install -r requirements.txt
 python chat_part.py
 ```
 
-### 配置文件
+## 配置文件
 
 程序首次运行会创建 `config.json` 配置文件
 
@@ -75,41 +75,8 @@ DEFAULT_CONFIG = {
 }
 ```
 
-## 可能遇到的问题
-
-### 1. 邮箱管理
-
-某些邮件服务器（如 163邮箱）在客户端连接时会返回 "unsafe login" 错误，这是因为服务器要求客户端在连接时发送 IMAP ID 信息以识别客户端类型。程序已在 `EmailUtils` 类中添加了 IMAP ID 支持，完全兼容邮件服务器的要求。
-
-#### 配置方式
-
-- 使用默认配置
-
-- 自定义配置：
-  
-  在 `data.json` 中添加 `imap_id` 字段：
-  
-  ```json
-  {
-    "emails": [
-      {
-        "email": "your-email@xx.com",
-        "password": "your-auth-code",
-        "imap_server": "imap.xxx.com",
-        "imap_id": {
-          "name": "myname",
-          "version": "1.0.0",
-          "vendor": "myclient",
-          "support-email": "testmail@test.com"
-        }
-      }
-    ]
-  }
-  ```
-
 ## 注意事项
 
 1. 确保有稳定的网络连接用于下载模型
 2. 首次运行可能需要一些时间下载sentence-transformers模型                                             
-3. 使用Live2D功能需要确保Live2D Viewer EX在运行并开放端口                                                                            
-4. 邮件功能需要配置IMAP服务器信息
+3. 使用Live2D功能需要确保Live2D Viewer EX在运行并开放端口                                                                        
