@@ -16,6 +16,8 @@
 
 - 可连接Live2DViewerEX
 
+- 现代化的交互界面
+
 ## 安装步骤
 
 Python版本要求
