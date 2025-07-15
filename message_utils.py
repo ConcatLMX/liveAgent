@@ -125,7 +125,15 @@ class MessageUtils:
         try:
             ac = AiChat()
             new_message = self.make_messages(message)
-            return ac.get_message(new_message)
+            response = ac.get_message(new_message)
+            return response
+            
         except Exception as e:
-            print(f"[error]生成回复时发生错误: {e}")
+            error_msg = f"生成回复时发生错误: {e}"
+            print(f"[error]💥 ========== 回复生成失败 ==========")
+            print(f"[error]❌ {error_msg}")
+            import traceback
+            print(f"[error]🔍 错误堆栈: {traceback.format_exc()}")
+            print(f"[error]💥 ========== 返回默认错误消息 ==========")
+            
             return "抱歉，我无法生成回复，请稍后再试。"

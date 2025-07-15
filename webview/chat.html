@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Agent Chat</title>
+    
+    <!-- QWebChannel库 -->
+    <script src="qwebchannel.js"></script>
+    
+    <!-- MathJax配置 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                packages: {'[+]': ['base', 'ams', 'newcommand', 'mathtools']}
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                processHtmlClass: 'math-content'
+            },
+            startup: {
+                ready: function() {
+                    MathJax.startup.defaultReady();
+                }
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="chat-container">
+        <!-- 聊天消息将在这里动态添加 -->
+    </div>
+    
+    <div id="input-area">
+        <div id="input-container">
+            <textarea id="message-input"></textarea>
+        </div>
+        <button id="send-button" disabled></button>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

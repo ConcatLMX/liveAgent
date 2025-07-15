@@ -40,24 +40,19 @@ class AiChat:
     def get_message(self, message: list) -> str:
         """发送请求并返回 AI 回复"""
         try:
-            print(f"[debug]准备发送请求到AI模型: {self.model}")
-            print(f"[debug]请求消息数量: {len(message)}")
-            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=message,
                 temperature=self.temperature,
             )
-
+            
             result = response.choices[0].message.content
-            print(f"[debug]AI回复长度: {len(result) if result else 0}")
             return result
             
         except Exception as e:
-            print(f"[error]AI 回复生成失败: {e}")
-            print(f"[error]API URL: {self.api_url}")
-            print(f"[error]Model: {self.model}")
-            print(f"[error]Messages: {message}")
+            print(f"[error]AI API调用失败: {e}")
+            import traceback
+            print(f"[error]错误堆栈: {traceback.format_exc()}")
             return "抱歉，我现在无法回复您的消息，请稍后再试。"
         
     # 处理通用ai询问
