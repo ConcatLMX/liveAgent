@@ -177,11 +177,10 @@ class ChatWebView(QWebEngineView):
                     """
                     
                     def on_script_finished(result):
-                        pass  # 移除调试日志
+                        pass  # JavaScript执行结果记录已移除
                     
                     self.page().runJavaScript(script, on_script_finished)
                 else:
-                    pass  # 移除调试日志
                     # 页面未准备就绪，延迟重试
                     QTimer.singleShot(1000, wait_and_execute)
             

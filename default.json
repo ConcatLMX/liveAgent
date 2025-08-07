@@ -10,5 +10,5 @@
     "api_model": "",
     "live2d_uri": "ws://127.0.0.1:10086/api",
     "live2d_listen": false,
-    "theme_color": "#ff69b4"
+    "theme_color": "#ff0000"
 }

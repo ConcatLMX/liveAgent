@@ -318,7 +318,6 @@ function resetInputHeight(textarea) {
     const minHeight = 28; // 2倍行距的最小高度
     textarea.style.height = minHeight + 'px';
     textarea.style.overflowY = 'hidden';
-    textarea.setAttribute('data-lines', '1'); // 重置行数记录
     
     // 调整按钮位置
     adjustButtonPosition(minHeight);
@@ -336,43 +335,42 @@ function adjustInputHeight(textarea) {
     
     const minHeight = 28; // 2倍行距 (14px * 2)
     const maxHeight = 112; // 8倍行距 (14px * 8)
-    const lineHeight = 16.8; // 14px * 1.2 line-height
     
-    // 计算当前内容的行数
-    const lines = textarea.value.split('\n').length;
-    const currentLines = textarea.hasAttribute('data-lines') ? parseInt(textarea.getAttribute('data-lines')) : 1;
+    // 临时设置为auto以获取真实的scrollHeight
+    const originalHeight = textarea.style.height;
+    textarea.style.height = 'auto';
+    let scrollHeight = textarea.scrollHeight;
     
-    // 只有行数发生变化时才调整高度
-    if (lines !== currentLines) {
-        textarea.setAttribute('data-lines', lines);
-        
-        // 临时设置为auto以获取真实高度
-        const originalHeight = textarea.style.height;
-        textarea.style.height = 'auto';
-        let scrollHeight = textarea.scrollHeight;
-        
-        // 如果没有内容，使用最小高度
-        if (!textarea.value.trim()) {
-            scrollHeight = minHeight;
-        }
-        
-        // 计算新高度
-        let newHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight));
-        
+    // 如果没有内容，使用最小高度
+    if (!textarea.value.trim()) {
+        scrollHeight = minHeight;
+    }
+    
+    // 计算新高度
+    let newHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight));
+    
+    // 获取当前高度（用于比较是否需要更新）
+    const currentHeight = parseInt(originalHeight) || minHeight;
+    
+    // 只有当高度确实需要改变时才更新（避免不必要的DOM操作）
+    if (Math.abs(newHeight - currentHeight) > 1) { // 允许1px的误差
         // 直接设置新高度，无动画
         textarea.style.height = newHeight + 'px';
         
-        console.log(`📏 [HEIGHT_ADJUSTED] 行数变化: ${currentLines} -> ${lines}, 高度调整: ${newHeight}px`);
-        
-        // 动态滚动条控制
-        if (scrollHeight > maxHeight) {
-            textarea.style.overflowY = 'auto';
-        } else {
-            textarea.style.overflowY = 'hidden';
-        }
+        console.log(`📏 [HEIGHT_ADJUSTED] 高度变化: ${currentHeight}px -> ${newHeight}px (scrollHeight: ${scrollHeight}px)`);
         
         // 调整按钮位置到输入框中间高度
         adjustButtonPosition(newHeight);
+    } else {
+        // 恢复原始高度（如果没有变化）
+        textarea.style.height = originalHeight;
+    }
+    
+    // 动态滚动条控制
+    if (scrollHeight > maxHeight) {
+        textarea.style.overflowY = 'auto';
+    } else {
+        textarea.style.overflowY = 'hidden';
     }
     
     // 恢复滚动位置和焦点
@@ -460,7 +458,7 @@ function sendMessage() {
             console.log('✅ [USER_MESSAGE_ADDED] 用户消息已添加到界面');
         } else {
             console.log('❌ [CHAT_INTERFACE] chatInterface不可用');
-            // 移除调试日志
+            // 调试信息已移除
         }
     } catch (error) {
         console.log('❌ [UI_ERROR] 添加用户消息失败:', error);

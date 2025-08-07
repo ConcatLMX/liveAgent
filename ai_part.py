@@ -75,7 +75,7 @@ class AiChat:
                 "content": input
             })
             
-            # 移除调试日志
+            print(f"[info]发送给AI的消息数量: {len(messages)}")
             return self.get_message(messages)
             
         except Exception as e:

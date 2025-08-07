@@ -1040,7 +1040,7 @@ class SettingsController {
                 }
             });
         } else {
-            // Bridge不可用
+            console.error('[ERROR] Bridge 不可用:', !!this.bridge, !!this.bridge?.saveEmailConfig);
             this.showErrorMessage('邮箱配置功能暂不可用');
         }
     }
