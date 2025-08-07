@@ -1,0 +1,14 @@
+{
+    "max_day": 7,
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "hotkey": "Alt+Q",
+    "apikey": "",
+    "api_baseurl": "",
+    "temperature": 0.7,
+    "receiveemail": false,
+    "cosine_similarity": 0.5,
+    "api_model": "",
+    "live2d_uri": "ws://127.0.0.1:10086/api",
+    "live2d_listen": false,
+    "theme_color": "#ff69b4"
+}

@@ -18,7 +18,7 @@ import commands
 from faiss_utils import VectorDatabase
 from modules import is_json_file_empty
 from message_utils import MessageUtils
-from settings import SettingWindow
+from settings_webview import SettingWindow
 from Live2DViewerEX import L2DVEX
 from Automation import EmailUtils
 from Automation import EmailMonitorThread
@@ -41,8 +41,19 @@ def reload_config():
         print(f"[error]重新加载配置文件时发生错误: {e}")
         return False
 
-# 从 settings.py 导入默认配置
-from settings import DEFAULT_CONFIG
+# 从 default.json 导入默认配置
+import json
+import os
+
+def load_default_config():
+    """加载默认配置"""
+    default_file = "default.json"
+    if os.path.exists(default_file):
+        with open(default_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+DEFAULT_CONFIG = load_default_config()
 
 try:
     with open('config.json', 'r', encoding='utf-8') as f:
@@ -405,11 +416,22 @@ def start_app():
     
     #监听邮箱
     if CONFIG.get("receiveemail", False):
-        # 启动邮箱监听线程，传递app和vector_db实例
-        # 检查间隔设为300秒（5分钟），避免频繁连接邮件服务器
-        email_monitor = EmailMonitorThread("data.json", 300, app, app.vector_db)
-        email_monitor.start()
-        print("[info]邮箱监听线程已启动，检查间隔: 5分钟")
+        # 从data.json读取邮件检查间隔
+        try:
+            with open('data.json', 'r', encoding='utf-8') as f:
+                email_config = json.load(f)
+            check_interval_minutes = email_config.get("check_interval", 5)  # 默认5分钟
+            check_interval_seconds = check_interval_minutes * 60  # 转换为秒
+            
+            email_monitor = EmailMonitorThread("data.json", check_interval_seconds, app, app.vector_db)
+            email_monitor.start()
+            print(f"[info]邮箱监听线程已启动，检查间隔: {check_interval_minutes}分钟")
+        except Exception as e:
+            print(f"[error]读取邮件配置失败，使用默认间隔: {e}")
+            # 如果读取失败，使用默认的5分钟间隔
+            email_monitor = EmailMonitorThread("data.json", 300, app, app.vector_db)
+            email_monitor.start()
+            print("[info]邮箱监听线程已启动，检查间隔: 5分钟（默认）")
 
     # 成功标志
     print("[tips]对话框中输入--help()获取命令集")
@@ -421,3 +443,4 @@ def start_app():
 
 if __name__ == "__main__":  
     start_app()
+

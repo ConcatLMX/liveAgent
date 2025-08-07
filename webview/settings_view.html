@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设置</title>
+    <link rel="stylesheet" href="settings_styles.css">
+</head>
+<body>
+    <div id="settings-container">
+        <!-- 成功提示消息 -->
+        <div id="success-toast" class="toast">
+            <span id="toast-message"></span>
+        </div>
+        
+        <div class="settings-header">
+            <h1>设置</h1>
+            <div class="header-divider"></div>
+        </div>
+
+        <div class="settings-content">
+            <!-- 基础设置 -->
+            <div class="settings-section">
+                <div class="section-title">基础设置</div>
+                
+                <div class="setting-item">
+                    <label class="setting-label">历史保留天数</label>
+                    <div class="setting-control">
+                        <input type="number" id="max_day" class="number-input" min="1" max="365" placeholder="输入天数">
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label class="setting-label">热键</label>
+                    <div class="setting-control">
+                        <input type="text" id="hotkey" class="text-input" placeholder="例如: Alt+Q, Ctrl+Shift+H">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模型设置 -->
+            <div class="settings-section">
+                <div class="section-title">模型设置</div>
+                
+                <div class="setting-item">
+                    <label class="setting-label">Embedding模型</label>
+                    <div class="setting-control">
+                        <select id="model" class="select-input">
+                            <option value="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2">paraphrase-multilingual-MiniLM-L12-v2</option>
+                            <option value="sentence-transformers/all-MiniLM-L6-v2">all-MiniLM-L6-v2</option>
+                            <option value="sentence-transformers/all-mpnet-base-v2">all-mpnet-base-v2</option>
+                            <option value="sentence-transformers/paraphrase-MiniLM-L6-v2">paraphrase-MiniLM-L6-v2</option>
+                            <option value="sentence-transformers/distiluse-base-multilingual-cased">distiluse-base-multilingual-cased</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label class="setting-label">LLM模型</label>
+                    <div class="setting-control api-control">
+                        <span id="api-model-display" class="model-display">未设置</span>
+                        <button id="edit-api-config" class="edit-btn">编辑</button>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label class="setting-label">Temperature</label>
+                    <div class="setting-control">
+                        <div class="slider-container">
+                            <input type="range" id="temperature" class="slider" min="0" max="2" step="0.1" value="0.7">
+                            <span id="temperature-value" class="slider-value">0.7</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label class="setting-label">相似度阈值</label>
+                    <div class="setting-control">
+                        <div class="slider-container">
+                            <input type="range" id="cosine_similarity" class="slider" min="0" max="1" step="0.05" value="0.5">
+                            <span id="cosine_similarity-value" class="slider-value">0.5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 邮箱设置 -->
+            <div class="settings-section">
+                <div class="section-title">邮箱设置</div>
+                
+                <div class="setting-item">
+                    <label class="setting-label">邮件监听</label>
+                    <div class="setting-control">
+                        <div class="switch-container">
+                            <input type="checkbox" id="receiveemail" class="switch-input">
+                            <label for="receiveemail" class="switch-label">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label class="setting-label">邮箱配置</label>
+                    <div class="setting-control">
+                        <button id="email-config-btn" class="footer-btn">配置</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live2DViewerEX通信 -->
+            <div class="settings-section">
+                <div class="section-title">Live2DViewerEX通信</div>
+
+                <div class="setting-item">
+                    <label class="setting-label">Live2D监听</label>
+                    <div class="setting-control">
+                        <div class="switch-container">
+                            <input type="checkbox" id="live2d_listen" class="switch-input">
+                            <label for="live2d_listen" class="switch-label">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label class="setting-label">Live2D URI</label>
+                    <div class="setting-control">
+                        <input type="text" id="live2d_uri" class="text-input" placeholder="例如: ws://127.0.0.1:10086/api">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 个性化 -->
+            <div class="settings-section personalization-section">
+                <div class="section-title">个性化</div>
+                
+                <div class="setting-item">
+                    <label class="setting-label">主题色</label>
+                    <div class="setting-control">
+                        <input type="color" id="theme-color" class="color-input" value="#ff69b4">
+                        <span class="color-preview" id="theme-color-preview">粉色</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <label class="setting-label">系统提示词</label>
+                    <div class="setting-control">
+                        <button id="system-prompt-btn" class="footer-btn">设置</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 其他 -->
+            <div class="settings-section">
+                <div class="section-title">其他</div>
+                <div class="footer-section">
+                    <button id="clear-history-btn" class="footer-btn">清除对话历史</button>
+                    <button id="about-btn" class="footer-btn">关于</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统提示词设置弹窗 -->
+        <div id="system-prompt-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>系统提示词设置</h2>
+                    <span class="close" id="close-system-prompt">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="prompt-description">
+                        <p>系统提示词将影响AI的回复风格和行为，请谨慎设置。</p>
+                    </div>
+                    <div class="prompt-input-section">
+                        <label class="prompt-label">系统提示词内容</label>
+                        <textarea id="system-prompt-content" class="prompt-textarea" 
+                                placeholder="在此输入系统提示词...&#10;&#10;例如：&#10;你是一个专业的AI助手，请以友好、专业的态度回答用户的问题。在回答时请注意：&#10;1. 保持客观中立&#10;2. 提供准确的信息&#10;3. 如果不确定，请说明"></textarea>
+                    </div>
+                    <div class="prompt-templates">
+                        <label class="prompt-label">快速模板</label>
+                        <div class="template-buttons">
+                            <button class="template-btn" data-template="professional">专业</button>
+                            <button class="template-btn" data-template="friendly">友好</button>
+                            <button class="template-btn" data-template="creative">创意</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-system-prompt" class="modal-btn primary">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- API配置弹窗 -->
+        <div id="api-config-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>API配置</h2>
+                    <span class="close" id="close-api-config">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="config-section">
+                        <div class="setting-row">
+                            <label>API Key</label>
+                            <div class="input-with-toggle">
+                                <input type="password" id="modal-apikey" class="modal-input" placeholder="输入API密钥">
+                                <button id="toggle-modal-apikey" class="toggle-visibility-btn">👁</button>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>API Base URL</label>
+                            <input type="text" id="modal-api-baseurl" class="modal-input" placeholder="输入API基础URL">
+                        </div>
+                        <div class="setting-row">
+                            <label>API模型</label>
+                            <input type="text" id="modal-api-model" class="modal-input" placeholder="输入API模型名称">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-api-config" class="modal-btn primary">保存配置</button>
+                    <button id="cancel-api-config" class="modal-btn">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 邮箱配置弹窗 -->
+        <div id="email-config-modal" class="modal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h2>邮箱配置</h2>
+                    <span class="close" id="close-email-config">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="config-section">
+                        <h3>邮箱监听设置</h3>
+                        <div class="setting-row">
+                            <label>检查间隔（分钟）</label>
+                            <input type="number" id="email-check-interval" min="1" max="60" value="5">
+                        </div>
+                    </div>
+                    
+                    <div class="config-section">
+                        <h3>邮箱账户</h3>
+                        <div id="email-accounts-container">
+                            <!-- 邮箱账户列表将在这里动态生成 -->
+                        </div>
+                        <button id="add-email-account" class="add-btn">+ 添加邮箱账户</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-email-config" class="modal-btn primary">保存配置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 清除对话历史确认弹窗 -->
+        <div id="clear-history-modal" class="modal">
+            <div class="modal-content small">
+                <div class="modal-header">
+                    <h2>确认清除</h2>
+                    <span class="close" id="close-clear-history">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="warning-message">
+                        <p>您确定要清除所有对话历史记录吗？</p>
+                        <p>此操作不可撤销，将删除所有聊天记录和向量数据库内容。</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="confirm-clear-history" class="modal-btn danger">确认清除</button>
+                    <button id="cancel-clear-history" class="modal-btn">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="settings-actions">
+            <button id="save-btn" class="action-btn primary">保存设置</button>
+        </div>
+    </div>
+
+    <script src="qwebchannel.js"></script>
+    <script src="settings_controller.js"></script>
+</body>
+</html>

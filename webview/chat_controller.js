@@ -460,7 +460,7 @@ function sendMessage() {
             console.log('✅ [USER_MESSAGE_ADDED] 用户消息已添加到界面');
         } else {
             console.log('❌ [CHAT_INTERFACE] chatInterface不可用');
-            console.log('🔍 [DEBUG] window.chatInterface:', window.chatInterface);
+            // 移除调试日志
         }
     } catch (error) {
         console.log('❌ [UI_ERROR] 添加用户消息失败:', error);
@@ -527,6 +527,23 @@ function sendViaConsole(message) {
     }
     
     console.log('✅ [CONSOLE_SEND_COMPLETE] 控制台发送完成');
+}
+
+// 添加系统消息
+function addSystemMessage(content) {
+    const chatContainer = document.getElementById('chat-container');
+    if (!chatContainer) return;
+    
+    const messageEl = document.createElement('div');
+    messageEl.className = 'message-container system-message';
+    messageEl.innerHTML = `
+        <div class="message-content">
+            <div class="system-text">${content}</div>
+        </div>
+    `;
+    
+    chatContainer.appendChild(messageEl);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
 // 页面加载完成后初始化

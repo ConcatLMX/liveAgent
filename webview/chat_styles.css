@@ -1,3 +1,14 @@
+/* 聊天窗口样式 */
+
+:root {
+    --theme-color: #ff69b4;
+    --theme-color-shadow-light: rgba(255, 105, 180, 0.1);
+    --theme-color-shadow-medium: rgba(255, 105, 180, 0.3);
+    --theme-color-shadow-heavy: rgba(255, 105, 180, 0.4);
+    --theme-color-background: rgba(255, 105, 180, 0.05);
+    --theme-color-shadow-super-heavy: rgba(255, 105, 180, 0.7);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -35,14 +46,14 @@ body {
 }
 
 #chat-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    background: var(--theme-color);
     border-radius: 10px;
     border: 2px solid transparent;
     background-clip: content-box;
 }
 
 #chat-container::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #5a67d8 0%, #6b46c1 100%);
+    background: var(--theme-color);
     background-clip: content-box;
 }
 
@@ -73,14 +84,14 @@ body {
 }
 
 .user-message .message-content {
-    background: linear-gradient(135deg, #FFB6C1 0%, #FFC0CB 100%);
+    background: var(--theme-color);
     color: white;
     padding: 12px 16px;
     border-radius: 18px 18px 4px 18px;
     font-size: 14px;
     line-height: 1.4;
     word-wrap: break-word;
-    box-shadow: 0 2px 8px rgba(255, 182, 193, 0.3);
+    box-shadow: 0 2px 8px var(--theme-color-shadow-medium);
 }
 
 /* AI消息 */
@@ -131,7 +142,7 @@ body {
 .thinking-dot {
     width: 6px;
     height: 6px;
-    background: #4FC3F7;
+    background: var(--theme-color);
     border-radius: 50%;
     animation: thinkingPulse 1.4s infinite ease-in-out both;
 }
@@ -160,7 +171,7 @@ body {
 }
 
 .thinking-text {
-    color: #4FC3F7;
+    color: var(--theme-color);
     font-style: italic;
 }
 
@@ -193,14 +204,14 @@ body {
 #input-container:hover {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
     transform: translateY(-1px);
-    border-color: rgba(255, 182, 193, 0.4);
+    border-color: var(--theme-color-shadow-heavy);
 }
 
 #input-container:focus-within {
     background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(255, 182, 193, 0.15), 0 4px 20px rgba(255, 182, 193, 0.1);
+    box-shadow: 0 0 0 3px var(--theme-color-shadow-light), 0 4px 20px var(--theme-color-shadow-light);
     transform: translateY(-1px);
-    border-color: rgba(255, 182, 193, 0.5);
+    border-color: var(--theme-color-shadow-heavy);
 }
 
 #message-input {
@@ -231,7 +242,7 @@ body {
     height: 42px;
     border: none;
     border-radius: 21px;
-    background: linear-gradient(135deg, #FFB6C1 0%, #FFC0CB 100%);
+    background: var(--theme-color);
     color: white;
     font-size: 14px;
     cursor: pointer;
@@ -240,7 +251,7 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    box-shadow: 0 4px 16px rgba(255, 182, 193, 0.5), 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 16px var(--theme-color-shadow-heavy), 0 2px 8px rgba(0, 0, 0, 0.1);
     position: relative;
     margin-left: 15px;
     margin-bottom: 8px; /* 初始底部边距，会被JS动态调整 */
@@ -248,20 +259,20 @@ body {
 
 #send-button:hover:not(:disabled) {
     transform: scale(1.08) translateY(-2px);
-    box-shadow: 0 8px 24px rgba(255, 182, 193, 0.7), 0 4px 12px rgba(0, 0, 0, 0.15);
-    background: linear-gradient(135deg, #FF91A4 0%, #FFB3BA 100%);
+    box-shadow: 0 8px 24px var(--theme-color-shadow-super-heavy), 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: var(--theme-color);
 }
 
 #send-button:active:not(:disabled) {
     transform: scale(0.95) translateY(0px);
-    box-shadow: 0 3px 8px rgba(255, 182, 193, 0.5);
+    box-shadow: 0 3px 8px var(--theme-color-shadow-heavy);
 }
 
 #send-button:disabled {
     opacity: 0.3;
     cursor: not-allowed;
     transform: none;
-    box-shadow: 0 2px 6px rgba(255, 182, 193, 0.2);
+    box-shadow: 0 2px 6px var(--theme-color-shadow-medium);
 }
 
 #send-button::before {
@@ -281,17 +292,17 @@ body {
 }
 
 #message-input::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    background: var(--theme-color);
     border-radius: 10px;
 }
 
 #message-input::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #5a67d8 0%, #6b46c1 100%);
+    background: var(--theme-color);
 }
 
 /* 输入框焦点时的高亮效果 */
 #input-container:focus-within #send-button {
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2), 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 0 0 2px var(--theme-color-shadow-light), 0 4px 12px var(--theme-color-shadow-heavy);
 }
 
 /* 输入框动画效果 */
@@ -326,19 +337,21 @@ body {
 
 .message-content h1 { 
     font-size: 1.6em;
-    border-bottom: 2px solid #667eea;
+    border-bottom: 2px solid var(--theme-color);
     padding-bottom: 5px;
+    color: #333;
 }
 
 .message-content h2 { 
     font-size: 1.4em;
     border-bottom: 1px solid #e1e5e9;
     padding-bottom: 3px;
+    color: #333;
 }
 
 .message-content h3 { 
     font-size: 1.2em; 
-    color: #667eea;
+    color: #333;
 }
 
 .message-content p {
@@ -366,10 +379,10 @@ body {
 }
 
 .message-content blockquote {
-    border-left: 4px solid #667eea;
+    border-left: 4px solid var(--theme-color);
     padding: 10px 15px;
     margin: 10px 0;
-    background: rgba(102, 126, 234, 0.05);
+    background: var(--theme-color-background);
     border-radius: 0 6px 6px 0;
     font-style: italic;
     color: #555;
@@ -377,8 +390,8 @@ body {
 
 /* 代码样式 */
 .inline-code {
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea;
+    background: var(--theme-color-shadow-light);
+    color: var(--theme-color);
     padding: 2px 6px;
     border-radius: 4px;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
@@ -394,7 +407,7 @@ body {
 }
 
 .code-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--theme-color);
     color: white;
     padding: 8px 12px;
     font-size: 12px;
@@ -433,14 +446,14 @@ body {
 
 /* 链接样式 */
 .message-content a {
-    color: #667eea;
+    color: #333;
     text-decoration: none;
     border-bottom: 1px solid transparent;
     transition: border-color 0.2s ease;
 }
 
 .message-content a:hover {
-    border-bottom-color: #667eea;
+    border-bottom-color: #333;
 }
 
 /* 数学公式样式 */
@@ -505,4 +518,24 @@ body {
 /* 平滑滚动 */
 html {
     scroll-behavior: smooth;
+}
+
+/* 系统消息样式 */
+.system-message {
+    align-self: center;
+    margin: 10px 0;
+}
+
+.system-message .message-content {
+    background: #f0f0f0;
+    color: #666;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+}
+
+.system-message .system-text {
+    font-style: italic;
 }

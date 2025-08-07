@@ -15,7 +15,7 @@ from control import WindowsControl
 class EmailUtils:
     """邮件处理工具类"""
     
-    def __init__(self, imap_server='', username='', password='', imap_id_info=None):
+    def __init__(self, imap_server='', username='', password='', use_ssl=True, imap_id_info=None):
         """
         初始化邮件工具
         
@@ -23,11 +23,13 @@ class EmailUtils:
             imap_server: IMAP服务器地址
             username: 邮箱用户名
             password: 邮箱密码或授权码
+            use_ssl: 是否使用SSL/TLS连接
             imap_id_info: IMAP ID信息字典，用于解决某些服务器的unsafe login问题
         """
         self.imap_server = imap_server
         self.username = username
         self.password = password
+        self.use_ssl = use_ssl
         self.uids_seen = set()  # 已处理的邮件UID集合
         
         # 设置默认的IMAP ID信息
@@ -40,7 +42,7 @@ class EmailUtils:
     def connect(self):
         """连接到IMAP服务器"""
         try:
-            self.imap_object = imapclient.IMAPClient(self.imap_server, ssl=True)
+            self.imap_object = imapclient.IMAPClient(self.imap_server, ssl=self.use_ssl)
             
             # 发送IMAP ID信息（解决unsafe login问题）
             try:
@@ -206,7 +208,7 @@ class EmailUtils:
                 print(f"[error]邮件监听过程中发生错误: {e}")
                 time.sleep(60)  # 出错后等待1分钟再重试
     
-    def update_credentials(self, imap_server, username, password):
+    def update_credentials(self, imap_server, username, password, use_ssl=True):
         """
         更新邮件服务器凭据
         
@@ -214,10 +216,12 @@ class EmailUtils:
             imap_server: IMAP服务器地址
             username: 邮箱用户名
             password: 邮箱密码或授权码
+            use_ssl: 是否使用SSL/TLS连接
         """
         self.imap_server = imap_server
         self.username = username
         self.password = password
+        self.use_ssl = use_ssl
         self.uids_seen.clear()  # 清空已处理的邮件记录
 
 
@@ -257,7 +261,7 @@ class EmailMonitorThread(threading.Thread):
             with open(self.email_data_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             
-            emails_config = data.get("emails", [])
+            emails_config = data.get("accounts", [])  # 修改为 accounts
             if not emails_config:
                 print("[warning]未配置邮箱账户，跳过邮箱监听")
                 return []
@@ -282,6 +286,7 @@ class EmailMonitorThread(threading.Thread):
                     imap_server=email_config.get("imap_server", ""),
                     username=email_config.get("email", ""),
                     password=email_config.get("password", ""),
+                    use_ssl=email_config.get("use_ssl", True),
                     imap_id_info=imap_id_info
                 )
                 monitors.append({
@@ -325,7 +330,7 @@ class EmailMonitorThread(threading.Thread):
             
             try:
                 # 构造AI摘要请求 - 改进prompt，让摘要更简洁
-                summary_prompt = f"请为这封邮件生成一个简洁的中文摘要（不超过50字）：\n主题：{subject}\n发件人：{sender}\n内容：{email_content}"
+                summary_prompt = f"请为这封邮件生成一个简洁的中文摘要（不超过50字）：\n主题：{subject}\n发件人：{sender}\n内容：{email_content}，格式如下：您受到了封邮件：“总结内容”"
                 print(f"[info]正在为邮件生成摘要，主题: {subject}")
                 
                 # 使用修复后的general_summary方法
@@ -352,7 +357,7 @@ class EmailMonitorThread(threading.Thread):
                     print(f"[info]邮件摘要已保存到消息历史和向量数据库")
                 except Exception as e:
                     print(f"[error]保存邮件摘要失败: {e}")
-                    # 如果 MessageUtils 失败，则直接写入 chat_history.json 作为备用(稳定后删)
+                    # 如果 MessageUtils 失败，则直接写入 chat_history.json 作为备用
                     try:
                         from datetime import datetime
                         import json
@@ -379,11 +384,15 @@ class EmailMonitorThread(threading.Thread):
                     except Exception as backup_e:
                         print(f"[error]备用方式保存邮件摘要也失败: {backup_e}")
 
-            #Windows消息提醒
-            WindowsControl.send_notification(
-                title=f"新邮件来自 {sender}",
-                message=f"主题：{subject}"
-            )
+            #Windows消息提醒 - 发送AI生成的摘要
+            try:
+                WindowsControl().send_notification(
+                    title=f"新邮件来自 {sender}",
+                    message=summary  # 使用AI生成的摘要而不是原始主题
+                )
+                print(f"[info]已发送邮件通知: {summary[:50]}...")
+            except Exception as e:
+                print(f"[error]发送Windows通知失败: {e}")
             
             # 发送到Live2D（如果启用）
             if self.config.get("live2d_listen", False):

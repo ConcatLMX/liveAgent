@@ -20,6 +20,17 @@ class WindowsControl:
             bool: 发送成功返回True，失败返回False
         """
         try:
+            # 确保参数不为空且为字符串类型
+            title = str(title) if title is not None else "通知"
+            message = str(message) if message is not None else "无内容"
+            duration = int(duration) if duration is not None else 5
+            
+            # 限制标题和消息长度，避免显示问题
+            if len(title) > 64:
+                title = title[:61] + "..."
+            if len(message) > 256:
+                message = message[:253] + "..."
+            
             self.toaster.show_toast(
                 title=title,
                 msg=message,
@@ -30,4 +41,23 @@ class WindowsControl:
             
         except Exception as e:
             print(f"[error]发送通知时出现错误: {e}")
-            return False
+            # 如果win10toast失败，尝试使用系统级别的fallback
+            try:
+                import subprocess
+                # 使用PowerShell作为备用通知方式
+                ps_command = f'''
+                Add-Type -AssemblyName System.Windows.Forms
+                $notify = New-Object System.Windows.Forms.NotifyIcon
+                $notify.Icon = [System.Drawing.SystemIcons]::Information
+                $notify.BalloonTipTitle = "{title}"
+                $notify.BalloonTipText = "{message}"
+                $notify.Visible = $true
+                $notify.ShowBalloonTip(5000)
+                '''
+                subprocess.run(["powershell", "-Command", ps_command], 
+                             capture_output=True, text=True, timeout=10)
+                print("[info]使用PowerShell备用通知方式")
+                return True
+            except Exception as fallback_e:
+                print(f"[error]备用通知方式也失败: {fallback_e}")
+                return False

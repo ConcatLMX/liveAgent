@@ -1,18 +1,16 @@
 # liveAgent
 
-长记忆无感AI助手
+无感AI助手
 
 ## 主要特点
 
-- 长期记忆和记忆更新机制
+- 长期记忆
 
-- 自定义模型
-
-- 自定义AI设定
+- 自定义模型和AI设定
 
 - 邮件提醒
 
-- Markdown渲染
+- 支持Markdown渲染
 
 - 可连接Live2DViewerEX
 
@@ -22,14 +20,20 @@
 
 Python版本要求
 
-- Python 3.12
+- Python 3.12+
 
-### 1. 克隆项目
+### 1. 获取代码
+
+#### 通过克隆项目
 
 ```bash
 git clone https://github.com/ConcatLMX/liveAgent.git
 cd liveAgent
 ```
+
+#### 通过Release下载
+
+右侧点击Release，下载相应版本源代码
 
 ### 2. 创建虚拟环境（推荐）
 
@@ -54,26 +58,27 @@ pip install -r requirements.txt
 ### 5. 运行程序
 
 ```bash
-python chat_part.py
+(环境中)python chat_part.py
 ```
 
 ## 配置文件
 
-程序首次运行会创建 `config.json` 配置文件
+程序首次运行会参考`default.json`创建 `config.json` 配置文件
 
 ```python
-DEFAULT_CONFIG = {
+{
     "max_day": 7,
     "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
     "hotkey": "Alt+Q",
     "apikey": "",
     "api_baseurl": "",
     "temperature": 0.7,
-    "receiveemail": False,
+    "receiveemail": false,
     "cosine_similarity": 0.5,
     "api_model": "",
     "live2d_uri": "ws://127.0.0.1:10086/api",
-    "live2d_listen": False
+    "live2d_listen": false,
+    "theme_color": "#ff69b4"
 }
 ```
 

@@ -8,7 +8,7 @@ import json
 import markdown
 from datetime import datetime
 from PyQt5.QtCore import (Qt, QPropertyAnimation, QPoint, QEasingCurve, 
-                         QTimer, QObject, pyqtSignal, QEvent, QStandardPaths, QUrl, QThread, QRectF)
+                         QTimer, QObject, pyqtSignal, pyqtSlot, QEvent, QStandardPaths, QUrl, QThread, QRectF)
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QTextEdit,
                            QLineEdit, QPushButton, QFrame, QScrollArea,
                            QSizePolicy, QHBoxLayout, QLabel, QSystemTrayIcon, 
@@ -17,6 +17,23 @@ from PyQt5.QtGui import (QFont, QIcon, QColor, QPainter, QBrush, QPen,
                         QLinearGradient, QPalette, QKeyEvent, QKeySequence, QRegion, QPainterPath)
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage
 from PyQt5.QtWebChannel import QWebChannel
+
+# 读取配置文件的函数
+def load_config():
+    """加载配置文件"""
+    config_file = "config.json"
+    if os.path.exists(config_file):
+        with open(config_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    
+    # 如果配置文件不存在，使用默认配置
+    default_file = "default.json"
+    if os.path.exists(default_file):
+        with open(default_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    
+    # 如果都不存在，返回默认主题色
+    return {"theme_color": "#ff69b4"}
 
 
 class ChatBridge(QObject):
@@ -33,6 +50,11 @@ class ChatBridge(QObject):
             self.command_executed.emit(message)
         else:
             self.message_sent.emit(message)
+    
+    @pyqtSlot(str)
+    def execute_command(self, command):
+        """执行命令"""
+        self.command_executed.emit(command)
 
 
 class SolidBackground(QWidget):
@@ -155,11 +177,11 @@ class ChatWebView(QWebEngineView):
                     """
                     
                     def on_script_finished(result):
-                        print(f"[debug]JavaScript执行结果: {result}")
+                        pass  # 移除调试日志
                     
                     self.page().runJavaScript(script, on_script_finished)
                 else:
-                    print(f"[debug]页面未准备就绪，状态: {result}，1秒后重试")
+                    pass  # 移除调试日志
                     # 页面未准备就绪，延迟重试
                     QTimer.singleShot(1000, wait_and_execute)
             
@@ -206,7 +228,7 @@ class ChatWebView(QWebEngineView):
                     """
                     self.page().runJavaScript(script)
                 else:
-                    print(f"[debug]清空聊天记录时页面未准备就绪，状态: {result}，1秒后重试")
+                    # 页面未准备就绪，延迟重试
                     QTimer.singleShot(1000, clear_script)
             
             self.page().runJavaScript(check_script, on_check_finished)
@@ -242,7 +264,7 @@ class ChatWebView(QWebEngineView):
                     self.page().runJavaScript(script)
                     self.thinking_bubble_active = False
                 else:
-                    print(f"[debug]移除思考气泡时页面未准备就绪，状态: {result}")
+                    pass  # 页面未准备就绪
             
             self.page().runJavaScript(check_script, on_check_finished)
         
@@ -281,7 +303,7 @@ class ChatWebView(QWebEngineView):
                     else:
                         self.thinking_bubble_active = False
                 else:
-                    print(f"[debug]设置AI处理状态时页面未准备就绪，状态: {result}")
+                    pass  # 页面未准备就绪
             
             self.page().runJavaScript(check_script, on_check_finished)
         
@@ -290,13 +312,90 @@ class ChatWebView(QWebEngineView):
     def _init_page(self):
         """初始化聊天页面"""
         # 强制使用本地HTML文件
-        html_file_path = os.path.join(os.path.dirname(__file__), "webview", "chat.html")
+        html_file_path = os.path.join(os.path.dirname(__file__), "webview", "chat_view.html")
         if os.path.exists(html_file_path):
             self.load(QUrl.fromLocalFile(html_file_path))
             print(f"[info]加载本地HTML文件: {html_file_path}")
+            
+            # 页面加载完成后注入主题色
+            def on_load_finished():
+                self._inject_theme_color()
+            
+            self.loadFinished.connect(on_load_finished)
         else:
             print(f"[error]HTML文件不存在: {html_file_path}")
             raise FileNotFoundError(f"找不到HTML文件: {html_file_path}")
+    
+    def _inject_theme_color(self):
+        """注入动态主题色"""
+        try:
+            # 读取配置中的主题色
+            config = load_config()
+            theme_color = config.get("theme_color", "#ff69b4")
+            
+            # 从十六进制颜色计算rgba值
+            def hex_to_rgba(hex_color, alpha):
+                hex_color = hex_color.lstrip('#')
+                r = int(hex_color[0:2], 16)
+                g = int(hex_color[2:4], 16)
+                b = int(hex_color[4:6], 16)
+                return f"rgba({r}, {g}, {b}, {alpha})"
+            
+            # 注入CSS变量的JavaScript代码
+            inject_script = f"""
+            (function() {{
+                // 创建或更新CSS样式
+                let styleEl = document.getElementById('dynamic-theme');
+                if (!styleEl) {{
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dynamic-theme';
+                    document.head.appendChild(styleEl);
+                }}
+                
+                // 设置CSS变量
+                styleEl.textContent = `
+                    :root {{
+                        --theme-color: {theme_color} !important;
+                        --theme-color-shadow-light: {hex_to_rgba(theme_color, 0.1)} !important;
+                        --theme-color-shadow-medium: {hex_to_rgba(theme_color, 0.3)} !important;
+                        --theme-color-shadow-heavy: {hex_to_rgba(theme_color, 0.4)} !important;
+                        --theme-color-background: {hex_to_rgba(theme_color, 0.05)} !important;
+                        --theme-color-shadow-super-heavy: {hex_to_rgba(theme_color, 0.7)} !important;
+                    }}
+                `;
+                
+                console.log('主题色已更新为: {theme_color}');
+            }})();
+            """
+            
+            # 执行注入脚本
+            self.page().runJavaScript(inject_script)
+            print(f"[info]主题色已注入: {theme_color}")
+            
+        except Exception as e:
+            print(f"[error]注入主题色失败: {e}")
+            # 使用默认主题色
+            fallback_script = """
+            (function() {
+                let styleEl = document.getElementById('dynamic-theme');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dynamic-theme';
+                    document.head.appendChild(styleEl);
+                }
+                styleEl.textContent = `
+                    :root {
+                        --theme-color: #ff69b4 !important;
+                        --theme-color-shadow-light: rgba(255, 105, 180, 0.1) !important;
+                        --theme-color-shadow-medium: rgba(255, 105, 180, 0.3) !important;
+                        --theme-color-shadow-heavy: rgba(255, 105, 180, 0.4) !important;
+                        --theme-color-background: rgba(255, 105, 180, 0.05) !important;
+                        --theme-color-shadow-super-heavy: rgba(255, 105, 180, 0.7) !important;
+                    }
+                `;
+            })();
+            """
+            self.page().runJavaScript(fallback_script)
 
 
 class ChatWindow(QWidget):
@@ -311,6 +410,10 @@ class ChatWindow(QWidget):
         super().__init__()
         self.initialized = False
         self.tray_icon = tray_icon
+        
+        # 读取主题色配置
+        self.config = load_config()
+        self.theme_color = self.config.get("theme_color", "#ff69b4")
         
         # 初始化窗口尺寸变量
         self.window_height = 650
@@ -377,18 +480,29 @@ class ChatWindow(QWidget):
         # 设置按钮
         self.settings_btn = QPushButton("⚙")
         self.settings_btn.setFixedSize(30, 30)
-        self.settings_btn.setStyleSheet("""
-            QPushButton {
+        
+        # 从主题色计算悬停颜色
+        def hex_to_rgba(hex_color, alpha):
+            hex_color = hex_color.lstrip('#')
+            r = int(hex_color[0:2], 16)
+            g = int(hex_color[2:4], 16)
+            b = int(hex_color[4:6], 16)
+            return f"rgba({r}, {g}, {b}, {alpha})"
+        
+        hover_bg = hex_to_rgba(self.theme_color, 0.1)
+        
+        self.settings_btn.setStyleSheet(f"""
+            QPushButton {{
                 background: transparent;
                 border-radius: 15px;
                 border: none;
                 font-size: 16px;
                 color: #888;
-            }
-            QPushButton:hover {
-                background: rgba(102, 126, 234, 0.1);
-                color: #667eea;
-            }
+            }}
+            QPushButton:hover {{
+                background: {hover_bg};
+                color: {self.theme_color};
+            }}
         """)
         self.settings_btn.clicked.connect(self._handle_settings)
         left_buttons_layout.addWidget(self.settings_btn)
